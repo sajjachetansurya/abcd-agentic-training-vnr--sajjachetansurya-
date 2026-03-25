@@ -1,5 +1,0 @@
-{
-  "name": "College AI Chatbot",
-  "description": "An AI-powered chatbot to provide comprehensive details about engineering colleges in Telangana, featuring user authentication, persistent data storage, and a theme toggle.",
-  "requestFramePermissions": []
-}
