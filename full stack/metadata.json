@@ -1,0 +1,5 @@
+{
+  "name": "College AI Chatbot",
+  "description": "A full-stack AI-powered chatbot for Telangana engineering colleges, built with React, Express, and Firebase. Features Google Authentication, real-time Firestore chat history, and Gemini AI integration.",
+  "requestFramePermissions": []
+}

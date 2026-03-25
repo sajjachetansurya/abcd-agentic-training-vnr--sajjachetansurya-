@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: /users/{userId}
+    // Document ID: userId (UID)
+    // Fields:
+    //   - uid: string (required) - The unique identifier for the user
+    //   - email: string (required, email format) - The user's email address
+    //   - displayName: string (optional) - The user's display name
+    //   - photoURL: string (optional) - The user's profile photo URL
+    //
+    // Collection: /users/{userId}/messages/{messageId}
+    // Document ID: auto-generated
+    // Fields:
+    //   - uid: string (required) - The UID of the user who sent the message
+    //   - text: string (required) - The text content of the message
+    //   - role: string (required, enum: user, assistant) - The role of the sender
+    //   - createdAt: timestamp (required) - The time the message was created
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "sajjachetansurya2799@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'name']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1000)) &&
+             (!('role' in data) || (data.role is string && (data.role == 'user' || isAdmin()))) &&
+             (data.keys().hasOnly(['uid', 'email', 'name', 'photoURL', 'role']));
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['uid', 'text', 'role', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 10000 &&
+             data.role in ['user', 'assistant'] &&
+             data.createdAt is timestamp &&
+             (data.keys().hasOnly(['uid', 'text', 'role', 'createdAt']));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.uid == resource.data.uid;
+      
+      match /messages/{messageId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidMessage(request.resource.data);
+        allow update: if false; // Messages should be immutable
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
