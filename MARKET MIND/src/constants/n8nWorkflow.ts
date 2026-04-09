@@ -1,0 +1,119 @@
+export const n8nWorkflowJSON = {
+  "nodes": [
+    {
+      "parameters": {
+        "path": "market-research",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook (Start)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-pro",
+        "options": {
+          "systemMessage": "You are a Researcher Agent. Use Google Search to find the latest data on the provided topic."
+        }
+      },
+      "id": "researcher-node",
+      "name": "Researcher Agent",
+      "type": "n8n-nodes-base.googleGeminiChatModel",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-pro",
+        "options": {
+          "systemMessage": "You are an Analyst Agent. Perform a SWOT analysis and identify market trends based on the research provided."
+        }
+      },
+      "id": "analyst-node",
+      "name": "Analyst Agent",
+      "type": "n8n-nodes-base.googleGeminiChatModel",
+      "typeVersion": 1,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-pro",
+        "options": {
+          "systemMessage": "You are an Editor Agent. Create a professional market intelligence report."
+        }
+      },
+      "id": "editor-node",
+      "name": "Editor Agent",
+      "type": "n8n-nodes-base.googleGeminiChatModel",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$node[\"Webhook (Start)\"].json[\"callbackUrl\"]}}",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "report",
+              "value": "={{$json[\"text\"]}}"
+            }
+          ]
+        }
+      },
+      "id": "callback-node",
+      "name": "HTTP Request (Result)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "webhook-node": {
+      "main": [
+        [
+          {
+            "node": "researcher-node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "researcher-node": {
+      "main": [
+        [
+          {
+            "node": "analyst-node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "analyst-node": {
+      "main": [
+        [
+          {
+            "node": "editor-node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "editor-node": {
+      "main": [
+        [
+          {
+            "node": "callback-node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+};
